@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./css/main.css">
+  <title>Chat</title>
+</head>
+<body>
+  <div class="overlay hidden">
+    <div id="auth" class="unauthorized">
+      <div class="auth__cover"><img class="auth__img" src="./img/login.svg" alt="login"></div>
+      <h2 class="auth__title">Авторизация</h2>
+      <div class="auth__text">Введите пожалуйста свой ник для дальнейшей авторизации</div>
+      <form class="auth__form" id="login">
+        <input class="auth__input" type="text" name="login" id="loginInput" placeholder="Введите свой ник">
+        <button class="auth__btn" type="submit">войти</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="left-col col">
+      <div class="head head--left">
+        <div class="hamburger" id="hamburger">
+          <a class="hamburger__menu">
+            <div class="hamburger__plank"></div>
+          </a>
+        </div>
+      </div>
+      <ul class="users">
+        <li class="user">
+          <img class="user__image" src="" alt="photo">
+          <div class="user__info">
+            <div class="user__nick"><b>{{nick}}</b></div>
+            <div class="user__last-message">{{last-message}}</div>
+          </div>
+        </li>
+
+      </ul>
+    </div>
+
+    <div class="right-col col">
+
+      <div class="head head--right">
+        <div class="head__title">Чат</div>
+        <div class="head__text">{{}}</div>
+      </div>
+
+      <div class="chat-messages" id="chat"></div>
+
+      <form class="messageForm" id="messageForm">
+        <input class="messageForm__input" type="text" name="message" id="message" placeholder="Введите сообщение...">
+        <button class="messageForm__btn" type="submit" value="send">Отправить</button>
+       
+      </form>
+
+    </div>
+    
+  </div>
+ 
+
+<script type="module" src="./client.js">
+
+</script>
+
+
+</body>
+</html>
