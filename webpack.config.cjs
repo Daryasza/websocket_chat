@@ -10,7 +10,7 @@ const env = process.env.NODE_ENV || 'development';
 module.exports = {
   mode: env,
   entry: {
-    index: path.resolve(__dirname, "src/index.js")
+    index: path.resolve(__dirname, "src/client.js")
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

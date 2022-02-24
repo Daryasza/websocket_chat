@@ -138,6 +138,7 @@ input[type=text] {
   font-size: 15px;
   text-transform: uppercase;
   font-weight: 700;
+  margin-bottom: 20px;
 }
 
 .container {
@@ -245,6 +246,7 @@ input[type=text] {
   padding: 20px 10px ;
   font-size: 14px;
   flex: 1;
+  margin-right: 20px;
 }
 
 .messageForm__btn {
@@ -256,5 +258,12 @@ input[type=text] {
   border-radius: 5px;
 }
 
+.mesageSent {
+
+}
+
+.error {
+  color: #c95c49;
+}
 
 

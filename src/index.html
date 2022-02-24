@@ -8,7 +8,7 @@
   <title>Chat</title>
 </head>
 <body>
-  <div class="overlay hidden">
+  <div class="overlay">
     <div id="auth" class="unauthorized">
       <div class="auth__cover"><img class="auth__img" src="./img/login.svg" alt="login"></div>
       <h2 class="auth__title">Авторизация</h2>
@@ -16,6 +16,7 @@
       <form class="auth__form" id="login">
         <input class="auth__input" type="text" name="login" id="loginInput" placeholder="Введите свой ник">
         <button class="auth__btn" type="submit">войти</button>
+        <span class="error" id="authentication-error"></span>
       </form>
     </div>
   </div>
