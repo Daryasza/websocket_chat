@@ -10,7 +10,7 @@ const env = process.env.NODE_ENV || 'development';
 module.exports = {
   mode: env,
   entry: {
-    index: path.resolve(__dirname, "src/client.js")
+    index: path.resolve(__dirname, "src/index.js")
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -24,23 +24,32 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ["style-loader", "css-loader"]
+        use: ["style-loader", "css-loader"],
       },
       {
         test: /\.scss$/,
         use: ["style-loader", "css-loader", "sass-loader"]
       },
       {
-        test: /\.js$/,
-        exclude: /node_modules/,
-        use: ["babel-loader"]
+        test: /\.m?js$/,
+        exclude: /(node_modules|bower_components)/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env']
+          }
+        }
       }
+      // {
+      //   test: /\.js$/i,
+      //   exclude: /node_modules/,
+      //   use: ["babel-loader"]
+      // }
     ]
   },
   plugins: [
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, "src/index.html"),
-      // what is chunks
       chunks: ['index'],
       filename: 'index.html'
     })
