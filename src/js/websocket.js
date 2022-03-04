@@ -1,4 +1,4 @@
-import { loadChatPage, userMessage, allUsersOnline, usersQuantity, addMessage, updateUserAvatars } from "./page.js";
+import { loadChatPage, userMessage, allUsersOnline, usersQuantity, addMessage, updateUserAvatars, removeOnlineUser } from "./page.js";
 import { SERVER_DOMAIN, WS_SERVER_PORT } from './env.js';
 
 const WS_SERVER_URL = "ws://" + SERVER_DOMAIN + ":" + WS_SERVER_PORT;
@@ -23,7 +23,6 @@ function onMessage(message) {
   const json = JSON.parse(message.data);
   switch(json.type) {
     case "init":
-      console.log(json)
       initMessageHandler(
         json.payload.username,
         json.payload.avatar
@@ -40,12 +39,13 @@ function onMessage(message) {
       );
     break;
 
-    case 'newUser': 
+    case 'newUser':
       userMessage(json.payload, 'joined the chat!');
     break;
 
-    case 'userLeft': 
+    case 'userLeft':
       userMessage(json.payload, 'left.');
+      removeOnlineUser(json.payload);
     break;
 
     case 'usersOnline':
@@ -55,7 +55,7 @@ function onMessage(message) {
     case 'usersQuantity':
       usersQuantity(json.payload);
     break;
-    
+
     case 'avatar-updated':
       updateUserAvatars(
         json.payload.username,
@@ -63,7 +63,7 @@ function onMessage(message) {
       );
     break;
 
-    default: 
+    default:
     console.log('unknown type!')
   }
 }

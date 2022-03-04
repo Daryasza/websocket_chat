@@ -5,9 +5,7 @@ function setCookie(key, value, exp) {
     d.setTime(d.getTime() + exp);
     expires = ";expires=" + d.toUTCString();
   }
-  console.log(key + "=" + value + expires + ";path=/")
   document.cookie = key + "=" + value + expires + ";path=/";
-  console.log(document.cookie)
 }
 
 function getCookie(key) {

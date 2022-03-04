@@ -32,17 +32,17 @@ function addMessage(currentUsr, avatarContent, user, text, time) {
   messageTime.classList.add('message-time');
   messageText.innerHTML = text;
   messageText.classList.add('message-text');
-  
+
 
   messageHeader.append(messageName, messageTime);
   messageBody.append(messageHeader, messageText);
   messageElement.append(messagePhoto);
   messageElement.append(messageBody);
-  
+
 
   fragment.appendChild(messageElement);
-  
-  
+
+
   messageBox.append(fragment);
   messageBox.scrollTop = messageBox.scrollHeight;
 }
@@ -57,6 +57,17 @@ function userMessage(username, text) {
   );
 
   messageBox.append(messageElement);
+}
+
+function removeOnlineUser(username) {
+  let userList = document.querySelector(".users").querySelectorAll(".user__item");
+
+  for (let user of userList) {
+    let userNameElement = user.querySelector(".user__info");
+    if (userNameElement && userNameElement.innerText === username) {
+      user.remove();
+    }
+  }
 }
 
 function loadChatPage(username, avatarB64) {
@@ -78,9 +89,13 @@ function loadChatPage(username, avatarB64) {
   avatarElement.setAttribute("src", avatar);
 
   avatarModalInput.addEventListener('change', () => {
-    getInputFileContent(avatarModalInput).then((fileContent) => {
-      avatarModalElement.setAttribute("src", fileContent);
-    });
+    let files = avatarModalInput.files;
+    if (files.length > 0 && files[0].type && files[0].type == 'image/png') {
+      let file = files[0];
+      getInputFileContent(file).then((fileContent) => {
+        avatarModalElement.setAttribute("src", fileContent);
+      });
+    }
   });
 
   modalForm.addEventListener('submit', (e) => {
@@ -110,20 +125,21 @@ function loadChatPage(username, avatarB64) {
       e.preventDefault();
     }
   })
-  
+
   avatarElement.addEventListener('drop', (e) => {
     e.preventDefault();
-    
+
     const file = e.dataTransfer.items[0].getAsFile();
     getInputFileContent(file).then((fileContent) => {
       sendMessage("avatar-updated", fileContent.split("base64,")[1])
       avatarElement.setAttribute("src", fileContent);
+      document.querySelector('.modal__img').setAttribute("src", fileContent);;
     });
   })
 
   document.getElementById('messageForm').addEventListener('submit', (e) => {
     e.preventDefault();
-  
+
     if (message) {
       sendMessage(
         "message",
@@ -141,11 +157,12 @@ function loadChatPage(username, avatarB64) {
 function allUsersOnline(users) {
   let usersBox = document.querySelector('.users');
   usersBox.innerHTML = '';
-  
+
   users.forEach(user => {
     let userElement = document.createElement('li');
+    userElement.classList.add("user__item")
     usersBox.append(userElement);
-    
+
     let userInfoElement = document.createElement('div');
     userInfoElement.setAttribute('class', 'user__info');
     userElement.append(userInfoElement);
@@ -171,15 +188,15 @@ function usersQuantity(usersN) {
   let element = document.querySelector('[data-role="online-quantity"]');
 
   switch (true){
-    case (usersN == 1): 
+    case (usersN == 1):
       element.innerHTML = `${usersN} участник`
       break;
 
-    case (usersN > 1 && usersN < 5): 
+    case (usersN > 1 && usersN < 5):
       element.innerHTML = `${usersN} участника`
       break;
 
-    case (usersN >= 5): 
+    case (usersN >= 5):
       element.innerHTML = `${usersN} участников`
       break;
 
@@ -188,7 +205,7 @@ function usersQuantity(usersN) {
 
 function updateUserAvatars(username, avatar) {
   let userMessages = document.querySelectorAll(".user-message");
-  let userList = document.querySelectorAll(".users");
+  let userList = document.querySelectorAll(".user__info");
 
   function renderAvatars(list, className, username, avatar) {
     for (let item of list) {
@@ -207,7 +224,7 @@ function updateUserAvatars(username, avatar) {
 
   renderAvatars(userMessages, "message-name", username, avatar);
   renderAvatars(userList, "user__name", username, avatar);
-}                                           
+}
 
 function getInputFileContent(file) {
   return new Promise((resolve) => {
@@ -225,5 +242,6 @@ export {
   addMessage,
   allUsersOnline,
   usersQuantity,
-  updateUserAvatars
+  updateUserAvatars,
+  removeOnlineUser
 }

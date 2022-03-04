@@ -59,6 +59,14 @@ wss.on('connection', (ws, req) => onConnection(ws, req));
 function onConnection(ws, req) {
   ws.uniqueID = getUniqueID();
   let username = authData[req.url.split('?').pop().split('=').pop()];
+
+  let isNewUser = true;
+  for (let client of Object.values(wss.clients)) {
+    if (username === client.username) {
+      isNewUser = false;
+    }
+  }
+
   wss.clients[ws.uniqueID] = {
     "username": username,
     "ws": ws
@@ -71,7 +79,9 @@ function onConnection(ws, req) {
   ws.on('message', (content) => onMessage(ws, content));
   ws.on('close', () => onClose(ws, username));
 
-  broadcastMessage(ws, 'newUser', username);
+  if (isNewUser) {
+    broadcastMessage(ws, 'newUser', username);
+  }
   usersOnline(ws);
   usersNumber(ws);
   sendAllMessages(ws);
@@ -89,7 +99,7 @@ function onMessage(ws, content) {
       })
     break;
 
-    case 'message': 
+    case 'message':
       let usr = payload.usr;
       let text = payload.text;
       let time = payload.time;
@@ -98,18 +108,18 @@ function onMessage(ws, content) {
       for (let id in wss.clients) {
         if (id === ws.uniqueID) {
           sendMessage(wss.clients[id]["ws"], "message", {
-            currentUsr: true, 
-            avatar: avatarData[usr], 
-            usr: usr, 
-            text: text, 
+            currentUsr: true,
+            avatar: avatarData[usr],
+            usr: usr,
+            text: text,
             time: time
           });
         } else {
           sendMessage(wss.clients[id]["ws"], "message", {
-            currentUsr: false, 
-            avatar: avatarData[usr], 
-            usr: usr, 
-            text: text, 
+            currentUsr: false,
+            avatar: avatarData[usr],
+            usr: usr,
+            text: text,
             time: time
           });
         }
@@ -131,6 +141,12 @@ function onMessage(ws, content) {
 
 function onClose(ws, username) {
   delete wss.clients[ws.uniqueID];
+
+  for (let client of Object.values(wss.clients)) {
+    if (username === client.username) {
+      return;
+    }
+  }
   broadcastMessage(ws, 'userLeft', username);
 }
 
@@ -153,7 +169,7 @@ function sendMessage(ws, type, payload) {
 function auth(creds) {
   // TODO: create real auth flow
   let username = JSON.parse(creds)["username"];
-  // 
+  //
 
   for (let key in authData) {
     if (authData[key] === username) {
@@ -172,7 +188,7 @@ function verify(access_token) {
 function generateString(len = 32) {
   let id = '';
   let charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  
+
   for (let i = 0; i < len; i++ ) {
     id += charset.charAt(Math.floor(Math.random() * len));
   }
@@ -196,31 +212,74 @@ function broadcastMessage(ws, type, payload) {
 }
 
 function usersOnline() {
-  Object.values(wss.clients).forEach((currentClient) => {
-    let currentWs = currentClient.ws;
+  let uniqUsers = getUniqUsers();
+  for (let currentUsername of uniqUsers) {
+    let currentUserClients = getClientsByUsername(currentUsername);
     let arr = [];
-    Object.values(wss.clients).forEach((client) => {
-      let ws = client.ws;
-      if (ws.uniqueID !== currentWs.uniqueID) {
+
+    for (let username of uniqUsers) {
+      let client = getClientsByUsername(username)[0];
+      if (username !== currentUsername) {
         arr.push({
           username: client.username,
           avatar: avatarData[client.username]
         });
       }
-    });
-    sendMessage(currentWs, 'usersOnline', arr);
-  });
+    }
+
+    for (let client of currentUserClients) {
+      sendMessage(client.ws, 'usersOnline', arr);
+    }
+  }
+
+  //
+  // Object.values(wss.clients).forEach((currentClient) => {
+  //   let currentWs = currentClient.ws;
+  //   let currentUsername = currentClient.username;
+  //   let arr = [];
+  //   Object.values(wss.clients).forEach((client) => {
+  //     let ws = client.ws;
+  //     let username = client.username;
+  //     if (ws.uniqueID !== currentWs.uniqueID && username !== currentUsername) {
+  //       arr.push({
+  //         username: client.username,
+  //         avatar: avatarData[client.username]
+  //       });
+  //     }
+  //   });
+  //   sendMessage(currentWs, 'usersOnline', arr);
+  // });
+}
+
+function getClientsByUsername(username) {
+  let clients = [];
+  for (let client of Object.values(wss.clients)) {
+    if (client.username === username) {
+      clients.push(client);
+    }
+  }
+  return clients;
+}
+
+function getUniqUsers() {
+  let uniqUsers = [];
+  for (let client of Object.values(wss.clients)) {
+    if (!uniqUsers.includes(client.username)) {
+      uniqUsers.push(client.username);
+    }
+  }
+  return uniqUsers;
 }
 
 function usersNumber() {
-  Object.values(wss.clients).forEach((client) => {
-    let usersN = Object.values(wss.clients).length;
-    sendMessage(client.ws, 'usersQuantity',usersN);
-  });
+  let uniqUsers = getUniqUsers();
+  for (let client of Object.values(wss.clients)) {
+    sendMessage(client.ws, 'usersQuantity', uniqUsers.length);
+  }
 }
 
 function sendAllMessages(ws) {
-  let username = wss.clients[ws.uniqueID]["usernme"];
+  let username = wss.clients[ws.uniqueID]["username"];
   for (let item of messageData) {
     let buf = Object.assign({}, item);
     buf.currentUsr = false;

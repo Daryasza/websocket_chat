@@ -6,7 +6,6 @@ import { getCookie, setCookie, removeCookie } from './js/cookie.js';
 
 function main() {
   let access_token = getCookie("access_token");
-  console.log(access_token)
   if (!access_token || access_token.length === 0) {
     document.getElementById('login').addEventListener('submit', (e) => {
       e.preventDefault();
