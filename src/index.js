@@ -3,7 +3,6 @@ import './css/main.css';
 import { getAccessToken } from './js/auth.js'
 import { initConnect } from './js/websocket.js';
 import { getCookie, setCookie, removeCookie } from './js/cookie.js';
-import { loadChatPage, loadLoginPage } from './js/page.js'
 
 function main() {
   let access_token = getCookie("access_token");
@@ -20,7 +19,6 @@ function main() {
           .then((access_token) => {
             access_token = access_token
             if (access_token && access_token.length > 0) {
-              // for debug purpose we can turn off cookie saving
               setCookie("access_token", access_token);
               _initConnect(access_token);
             } else {
@@ -39,7 +37,6 @@ function main() {
 function _initConnect(access_token) {
   initConnect(access_token)
     .then((e) => {
-      // TODO: add HTML loader until message with username is received
       console.log("Connected to server");
     })
     .catch((e) => {

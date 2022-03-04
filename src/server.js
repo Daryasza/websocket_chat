@@ -1,18 +1,15 @@
 const SERVER_HOST = '0.0.0.0';
 const HTTP_SERVER_PORT = "8081";
 
-import { writeFile, readFileSync, existsSync } from 'fs';
+import { writeFileSync, readFileSync, existsSync } from 'fs';
+import { DEFAULT_AVATAR } from './server-env.js';
 import { createServer } from "http";
 import { WebSocketServer } from 'ws';
 
-const messageDB = existsSync('messageDB.txt') && readFileSync('messageDB.txt');
-const messageData = messageDB ? JSON.parse(messageDB) : [];
-const authDB = existsSync('authDB.txt') && readFileSync('authDB.txt');
-const authData = authDB ? JSON.parse(authDB) : [];
+const messageData = existsSync('messageDB.txt') ? JSON.parse(readFileSync('messageDB.txt')) : [];
+const authData = existsSync('authDB.txt') ? JSON.parse(readFileSync('authDB.txt')) : {};
+const avatarData = existsSync('avatarDB.txt') ? JSON.parse(readFileSync('avatarDB.txt')) : {};
 
-const clients = {};
-const currentUsers = [];
-let currentPerson = {};
 
 const server = createServer((req, res) => {
   CORS(res);
@@ -20,7 +17,8 @@ const server = createServer((req, res) => {
     case "OPTIONS":
       res.writeHead(200);
       res.end();
-      break;
+    break;
+
     case "POST":
       let body = "";
       req.on("data", (chunk) => {
@@ -31,11 +29,12 @@ const server = createServer((req, res) => {
         res.writeHead(200);
         res.end();
       });
-      break;
+    break;
+
     default:
       res.writeHead(405);
       res.end();
-      break;
+    break;
   }
 });
 
@@ -43,6 +42,7 @@ server.listen(HTTP_SERVER_PORT, SERVER_HOST);
 
 const wss = new WebSocketServer({
   server: server,
+  clientTracking: true,
   verifyClient: (info) => {
     let access_token = info.req.url.split('?').pop().split('=').pop();
     if (!access_token) {
@@ -51,22 +51,30 @@ const wss = new WebSocketServer({
       return true;
     }
     return false;
-}
+  }
 });
+
 wss.on('connection', (ws, req) => onConnection(ws, req));
 
 function onConnection(ws, req) {
   ws.uniqueID = getUniqueID();
   let username = authData[req.url.split('?').pop().split('=').pop()];
-  clients[ws.uniqueID] = {
+  wss.clients[ws.uniqueID] = {
     "username": username,
     "ws": ws
   };
+
+  if (!avatarData[username]) {
+    avatarData[username] = DEFAULT_AVATAR;
+  }
+
   ws.on('message', (content) => onMessage(ws, content));
-  ws.on('close', (ws) => onClose(ws));
+  ws.on('close', () => onClose(ws, username));
 
-  sendNewUser(ws, username);
-
+  broadcastMessage(ws, 'newUser', username);
+  usersOnline(ws);
+  usersNumber(ws);
+  sendAllMessages(ws);
 }
 
 function onMessage(ws, content) {
@@ -74,44 +82,56 @@ function onMessage(ws, content) {
 
   switch(type) {
     case 'init':
-      sendMessage(ws, "init", clients[ws.uniqueID]["username"])
-      break;
+      let username = wss.clients[ws.uniqueID]["username"];
+      sendMessage(ws, "init", {
+        username: username,
+        avatar: avatarData[username]
+      })
+    break;
+
     case 'message': 
       let usr = payload.usr;
       let text = payload.text;
       let time = payload.time;
       messageData.push({usr, text, time});
 
-      for (let id in clients) {
-        sendMessage(clients[id]["ws"], "message", {usr: usr, text: text, time: time});
+      for (let id in wss.clients) {
+        if (id === ws.uniqueID) {
+          sendMessage(wss.clients[id]["ws"], "message", {
+            currentUsr: true, 
+            avatar: avatarData[usr], 
+            usr: usr, 
+            text: text, 
+            time: time
+          });
+        } else {
+          sendMessage(wss.clients[id]["ws"], "message", {
+            currentUsr: false, 
+            avatar: avatarData[usr], 
+            usr: usr, 
+            text: text, 
+            time: time
+          });
+        }
       }
+    break;
 
-      break;
-    case 'currentUser': 
-      usr = payload.usr;
-      for (const client in clients) {
-        currentPerson.name = userName;
-        // currentPerson.photo = img;
-        currentUsers.push(currentPerson)
-
-        clients['newUser'].send(JSON.stringify({type: 'currentUser', usr: usr, allUsers: currentUsers}))
-        
+    case 'avatar-updated':
+      let _username = wss.clients[ws.uniqueID]["username"]
+      avatarData[_username] = payload;
+      for (let id in wss.clients) {
+        sendMessage(wss.clients[id]["ws"], "avatar-updated", {
+          username: _username,
+          avatar: avatarData[_username]
+        });
       }
-      break;
-      
-    case 'userLeft': 
-      usr = payload.usr;
-      for (const client in clients) {
-        clients['newUser'].send(JSON.stringify({type: 'currentUser', usr: usr}))
-        delete currentUsers.name;
-
-      }
-      break;
+    break;
   }
 }
 
-function onClose() {
-  delete clients['newUser'];
+function onClose(ws, username) {
+  delete wss.clients[ws.uniqueID];
+  broadcastMessage(ws, 'userLeft', username);
 }
 
 function CORS(res) {
@@ -123,6 +143,7 @@ function CORS(res) {
 }
 
 function sendMessage(ws, type, payload) {
+
   ws.send(JSON.stringify({
     "type": type,
     "payload": payload
@@ -130,7 +151,15 @@ function sendMessage(ws, type, payload) {
 }
 
 function auth(creds) {
+  // TODO: create real auth flow
   let username = JSON.parse(creds)["username"];
+  // 
+
+  for (let key in authData) {
+    if (authData[key] === username) {
+      return key;
+    }
+  }
   let access_token = generateString();
   authData[access_token] = username;
   return access_token;
@@ -156,39 +185,64 @@ function getUniqueID() {
     generateString(8);
 }
 
-process.on('SIGINT', () => {
-  wss.close();
-
-  if (messageData && messageData !== []) {
-    writeFile('messageDB.txt', JSON.stringify(messageData), err => {
-      if(err) {
-        console.log(err)
-      }
-    });
-  }
-  if (authData && authData !== []) {
-    writeFile('authDB.txt', JSON.stringify(authData), err => {
-      if(err) {
-        console.log(err)
-      }
-    });
-    process.exit();
-  }
-});
-
-
-
-function sendNewUser(ws, username) {
-
+function broadcastMessage(ws, type, payload) {
   let currentID = ws.uniqueID;
 
-  for (const id in clients) {
-    console.log();
-
-    if (clients[id].ws.uniqueID !== currentID) {
-      
-      sendMessage(clients[id].ws,'newUser', username)
+  for (const id in wss.clients) {
+    if (wss.clients[id].ws.uniqueID !== currentID) {
+      sendMessage(wss.clients[id].ws, type, payload)
     }
   }
 }
 
+function usersOnline() {
+  Object.values(wss.clients).forEach((currentClient) => {
+    let currentWs = currentClient.ws;
+    let arr = [];
+    Object.values(wss.clients).forEach((client) => {
+      let ws = client.ws;
+      if (ws.uniqueID !== currentWs.uniqueID) {
+        arr.push({
+          username: client.username,
+          avatar: avatarData[client.username]
+        });
+      }
+    });
+    sendMessage(currentWs, 'usersOnline', arr);
+  });
+}
+
+function usersNumber() {
+  Object.values(wss.clients).forEach((client) => {
+    let usersN = Object.values(wss.clients).length;
+    sendMessage(client.ws, 'usersQuantity',usersN);
+  });
+}
+
+function sendAllMessages(ws) {
+  let username = wss.clients[ws.uniqueID]["usernme"];
+  for (let item of messageData) {
+    let buf = Object.assign({}, item);
+    buf.currentUsr = false;
+    if (buf.usr === username) {
+      buf.currentUsr = true;
+    }
+    buf.avatar = avatarData[buf.usr]
+    sendMessage(ws, "message", buf);
+  }
+}
+
+
+process.on('SIGINT', () => {
+  wss.close();
+  if (messageData && messageData !== []) {
+    writeFileSync('messageDB.txt', JSON.stringify(messageData));
+  }
+  if (authData && authData !== {}) {
+    writeFileSync('authDB.txt', JSON.stringify(authData));
+  }
+  if (avatarData && avatarData !== {}) {
+    writeFileSync('avatarDB.txt', JSON.stringify(avatarData));
+  }
+  process.exit();
+});

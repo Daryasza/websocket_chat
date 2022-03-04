@@ -1,13 +1,13 @@
-import { loadChatPage, newUser, addMessage } from "./page.js";
+import { loadChatPage, userMessage, allUsersOnline, usersQuantity, addMessage, updateUserAvatars } from "./page.js";
 import { SERVER_DOMAIN, WS_SERVER_PORT } from './env.js';
 
-const WS_SERVER_URL = "ws://" + SERVER_DOMAIN + ":" + WS_SERVER_PORT
+const WS_SERVER_URL = "ws://" + SERVER_DOMAIN + ":" + WS_SERVER_PORT;
 let ws;
 
 function initConnect(access_token) {
   ws = new WebSocket(WS_SERVER_URL + '?access_token=' + access_token);
   ws.onmessage = e => onMessage(e);
-  ws.onclose = e => onClose(e);
+  // ws.onclose = e => onClose(e);
   return new Promise((resolve, reject) => {
     ws.onopen = e => {
       sendMessage("init", "");
@@ -19,53 +19,57 @@ function initConnect(access_token) {
   });
 }
 
-function initMessageHandler(payload) {
-  loadChatPage(payload);
-
-
-}
-
 function onMessage(message) {
   const json = JSON.parse(message.data);
-  console.log(json.payload)
   switch(json.type) {
     case "init":
-      initMessageHandler(json.payload);
+      console.log(json)
+      initMessageHandler(
+        json.payload.username,
+        json.payload.avatar
+      );
+    break;
 
-      break;
     case "message":
       addMessage(
+        json.payload.currentUsr,
+        json.payload.avatar,
         json.payload.usr,
         json.payload.text,
         json.payload.time
       );
-      break;
+    break;
+
     case 'newUser': 
-      let username = json.payload;
-      newUser(username);
-      break;
+      userMessage(json.payload, 'joined the chat!');
+    break;
 
     case 'userLeft': 
-      if (access_token != gotMessage.usr) {
-        messageElement.appendChild(document.createTextNode(`${gotMessage.usr} left chat`));
-        fragment.appendChild(messageElement);
-      }
+      userMessage(json.payload, 'left.');
+    break;
+
+    case 'usersOnline':
+      allUsersOnline(json.payload);
+    break;
+
+    case 'usersQuantity':
+      usersQuantity(json.payload);
+    break;
+    
+    case 'avatar-updated':
+      updateUserAvatars(
+        json.payload.username,
+        json.payload.avatar
+      );
     break;
 
     default: 
-      
+    console.log('unknown type!')
   }
-
-  
 }
 
-function onClose() {
-// ws.send(JSON.stringify({
-//   type: 'userLeft',
-//   payload: {
-//     user: currentUser
-//   }
-// }))
+function initMessageHandler(username, avatarContent) {
+  loadChatPage(username, avatarContent);
 }
 
 function sendMessage(type, payload) {
@@ -74,8 +78,6 @@ function sendMessage(type, payload) {
     "payload": payload
   }));
 }
-
-
 
 export {
   initConnect,
