@@ -1,9 +1,11 @@
 # Chat on JS using websockets
 
+## Description
+
 Chat uses cookies for authentification data storage. To add extra user, please log in via incognito window.
 To change avatar, drag and drop available. 
 
-To start the project use: 
+## How to use
 
 ``npm install`` - to set dependencies  
 ``npm run start`` - to start dev-server   
