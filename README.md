@@ -2,7 +2,7 @@
 
 ## Description
 
-Easy chat with pseudo-authorisation. Notifies all the other users about joining/leaving of a user. Saves messages after you leave the chat, and shows all of them to you when you're back. 
+Simple chat with pseudo-authorisation. Notifies all the other users about joining/leaving of a user. Saves messages after you leave the chat, and shows all of them to you when you're back. 
 
 Uses cookies for storage of authentification data. To add extra user, please log in via new incognito window.
 
